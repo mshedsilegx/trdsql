@@ -10,6 +10,7 @@ import (
 
 	"github.com/jwalton/gchalk"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 // AnalyzeOpts represents the options for the operation of Analyze.
@@ -80,19 +81,33 @@ func Analyze(fileName string, opts *AnalyzeOpts, readOpts *ReadOpts) error {
 	results := getResults(reader, len(names))
 
 	if opts.Detail {
-		fmt.Fprintf(w, "The table name is %s.\n", colorTable(tableName))
-		fmt.Fprintf(w, "The file type is %s.\n", colorFileType(rOpts.realFormat.String()))
+		if _, err := fmt.Fprintf(w, "The table name is %s.\n", colorTable(tableName)); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "The file type is %s.\n", colorFileType(rOpts.realFormat.String())); err != nil {
+			return err
+		}
 		if len(names) <= 1 && len(results) != 0 {
 			additionalAdvice(w, rOpts, columnNames[0], results[0][0])
 		}
 
-		fmt.Fprintln(w, colorCaption("\nData types:"))
-		typeTableRender(w, names, columnTypes)
+		if _, err := fmt.Fprintln(w, colorCaption("\nData types:")); err != nil {
+			return err
+		}
+		if err := typeTableRender(w, names, columnTypes); err != nil {
+			return err
+		}
 
-		fmt.Fprintln(w, colorCaption("\nData samples:"))
-		sampleTableRender(w, names, results)
+		if _, err := fmt.Fprintln(w, colorCaption("\nData samples:")); err != nil {
+			return err
+		}
+		if err := sampleTableRender(w, names, results); err != nil {
+			return err
+		}
 
-		fmt.Fprintln(w, colorCaption("\nExamples:"))
+		if _, err := fmt.Fprintln(w, colorCaption("\nExamples:")); err != nil {
+			return err
+		}
 	}
 
 	if len(results) == 0 {
@@ -100,29 +115,39 @@ func Analyze(fileName string, opts *AnalyzeOpts, readOpts *ReadOpts) error {
 	}
 	queries := examples(tableName, names, results[0])
 	for _, query := range queries {
-		fmt.Fprintf(w, "%s %s\n", opts.Command, `"`+query+`"`)
+		if _, err := fmt.Fprintf(w, "%s %s\n", opts.Command, `"`+query+`"`); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func typeTableRender(w io.Writer, names []string, columnTypes []string) {
+func typeTableRender(w io.Writer, names []string, columnTypes []string) error {
 	typeTable := tablewriter.NewWriter(w)
-	typeTable.SetAutoFormatHeaders(false)
-	typeTable.SetHeader([]string{"column name", "type"})
+	typeTable.Options(
+		tablewriter.WithHeaderAutoFormat(tw.Off),
+		tablewriter.WithHeader([]string{"column name", "type"}),
+	)
 	for i := range names {
-		typeTable.Append([]string{names[i], columnTypes[i]})
+		if err := typeTable.Append(names[i], columnTypes[i]); err != nil {
+			return err
+		}
 	}
-	typeTable.Render()
+	return typeTable.Render()
 }
 
-func sampleTableRender(w io.Writer, names []string, results [][]string) {
+func sampleTableRender(w io.Writer, names []string, results [][]string) error {
 	sampleTable := tablewriter.NewWriter(w)
-	sampleTable.SetAutoFormatHeaders(false)
-	sampleTable.SetHeader(names)
+	sampleTable.Options(
+		tablewriter.WithHeaderAutoFormat(tw.Off),
+		tablewriter.WithHeader(names),
+	)
 	for _, row := range results {
-		sampleTable.Append(row)
+		if err := sampleTable.Append(row); err != nil {
+			return err
+		}
 	}
-	sampleTable.Render()
+	return sampleTable.Render()
 }
 
 func additionalAdvice(w io.Writer, rOpts *ReadOpts, name string, value string) {
@@ -136,11 +161,11 @@ func additionalAdvice(w io.Writer, rOpts *ReadOpts, name string, value string) {
 
 func checkCSV(w io.Writer, value string) {
 	if value == "[" || value == "{" {
-		fmt.Fprintln(w, colorNotes("Is it a JSON file?"))
-		fmt.Fprintln(w, colorNotes("Please try again with -ijson."))
+		_, _ = fmt.Fprintln(w, colorNotes("Is it a JSON file?"))
+		_, _ = fmt.Fprintln(w, colorNotes("Please try again with -ijson."))
 		return
 	}
-	fmt.Fprintln(w, colorNotes("Is the delimiter different?"))
+	_, _ = fmt.Fprintln(w, colorNotes("Is the delimiter different?"))
 	delimiter := " "
 	if strings.Count(value, ";") > 1 {
 		delimiter = ";"
@@ -148,20 +173,20 @@ func checkCSV(w io.Writer, value string) {
 	if strings.Count(value, "\t") > 1 {
 		delimiter = "\\t"
 	}
-	fmt.Fprintf(w, colorNotes("Please try again with -id \"%s\" or other character.\n"), delimiter)
+	_, _ = fmt.Fprintf(w, colorNotes("Please try again with -id \"%s\" or other character.\n"), delimiter)
 	if strings.Contains(value, ":") {
-		fmt.Fprintln(w, colorNotes("Is it a LTSV file?"))
-		fmt.Fprintln(w, colorNotes("Please try again with -iltsv."))
+		_, _ = fmt.Fprintln(w, colorNotes("Is it a LTSV file?"))
+		_, _ = fmt.Fprintln(w, colorNotes("Please try again with -iltsv."))
 	}
 }
 
 func checkJSON(w io.Writer, jquery string, name string) {
-	fmt.Fprintln(w, colorNotes("Is it for internal objects?"))
+	_, _ = fmt.Fprintln(w, colorNotes("Is it for internal objects?"))
 	jq := "." + name
 	if jquery != "" {
 		jq = jquery + jq
 	}
-	fmt.Fprintf(w, colorNotes("Please try again with -ijq \"%s\".\n"), jq)
+	_, _ = fmt.Fprintf(w, colorNotes("Please try again with -ijq \"%s\".\n"), jq)
 }
 
 func quoteNames(names []string, quote string) []string {

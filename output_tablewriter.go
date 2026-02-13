@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 // TWWriter provides methods of the Writer interface.
@@ -29,13 +30,28 @@ func NewTWWriter(writeOpts *WriteOpts, markdown bool) *TWWriter {
 // PreWrite is preparation.
 func (w *TWWriter) PreWrite(columns []string, types []string) error {
 	w.writer = tablewriter.NewWriter(w.writeOpts.OutStream)
-	w.writer.SetAutoFormatHeaders(false)
-	w.writer.SetAutoWrapText(!w.writeOpts.OutNoWrap)
-	if w.markdown {
-		w.writer.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		w.writer.SetCenterSeparator("|")
+	w.writer.Options(
+		tablewriter.WithHeaderAutoFormat(tw.Off),
+		tablewriter.WithHeader(columns),
+	)
+
+	if w.writeOpts.OutNoWrap {
+		w.writer.Options(tablewriter.WithRowAutoWrap(tw.WrapNone))
 	}
-	w.writer.SetHeader(columns)
+
+	if w.markdown {
+		w.writer.Options(
+			tablewriter.WithRendition(tw.Rendition{
+				Borders: tw.Border{
+					Left:   tw.On,
+					Top:    tw.Off,
+					Right:  tw.On,
+					Bottom: tw.Off,
+				},
+				Symbols: tw.NewSymbols(tw.StyleMarkdown),
+			}),
+		)
+	}
 	w.results = make([]string, len(columns))
 
 	return nil
@@ -53,12 +69,10 @@ func (w *TWWriter) WriteRow(values []any, columns []string) error {
 		}
 		w.results[i] = str
 	}
-	w.writer.Append(w.results)
-	return nil
+	return w.writer.Append(w.results)
 }
 
 // PostWrite is actual output.
 func (w *TWWriter) PostWrite() error {
-	w.writer.Render()
-	return nil
+	return w.writer.Render()
 }

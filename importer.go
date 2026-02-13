@@ -377,8 +377,8 @@ func singleFileOpen(fileName string) (io.ReadCloser, error) {
 	if len(fileName) == 0 || fileName == "-" || strings.ToLower(fileName) == "stdin" {
 		return uncompressedReader(bufio.NewReader(os.Stdin)), nil
 	}
-	fileName = expandTilde(trimQuote(fileName))
-	file, err := os.Open(fileName)
+	fileName = filepath.Clean(expandTilde(trimQuote(fileName)))
+	file, err := os.Open(fileName) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +416,8 @@ func globFileOpen(globName string) (*io.PipeReader, error) {
 // copyFileOpen opens the file and copies it to the writer.
 func copyFileOpen(writer io.Writer, fileName string) error {
 	debug.Printf("Open: [%s]", fileName)
-	file, err := os.Open(fileName)
+	fileName = filepath.Clean(fileName)
+	file, err := os.Open(fileName) // #nosec G304
 	if err != nil {
 		return err
 	}

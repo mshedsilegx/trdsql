@@ -113,7 +113,7 @@ func (e *WriteFormat) write(ctx context.Context, rows *sql.Rows) error {
 		scanArgs[i] = &values[i]
 	}
 
-	if err := e.Writer.PreWrite(e.columns, e.types); err != nil {
+	if err := e.PreWrite(e.columns, e.types); err != nil {
 		return err
 	}
 
@@ -127,7 +127,7 @@ func (e *WriteFormat) write(ctx context.Context, rows *sql.Rows) error {
 		if err := rows.Scan(scanArgs...); err != nil {
 			return err
 		}
-		if err := e.Writer.WriteRow(values, e.columns); err != nil {
+		if err := e.WriteRow(values, e.columns); err != nil {
 			return err
 		}
 	}
@@ -135,7 +135,7 @@ func (e *WriteFormat) write(ctx context.Context, rows *sql.Rows) error {
 		return err
 	}
 
-	return e.Writer.PostWrite()
+	return e.PostWrite()
 }
 
 // isExecContext returns true if the query is not a SELECT statement.
